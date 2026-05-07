@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Mapa de Goteras – Satélite</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* Botón flotante */
+    .info {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="info">📍 Doble toque / doble clic para marcar gotera</div>
+<div id="map"></div>
+
+<script>
+  const latInicial = 13.809185;
+  const lonInicial = -89.352184;
+
+  // Mapa
+  const map = L.map("map").setView([latInicial, lonInicial], 19);
+
+  // 🛰️ CAPA SATÉLITE (tipo Google)
+  const satelite = L.tileLayer(
+    "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+    {
+      maxZoom: 22,
+      subdomains: ["mt0", "mt1", "mt2", "mt3"]
+    }
+  ).addTo(map);
+
+  let contador = 1;
+
+  // 📍 Evento doble click (PC)
+  map.on("dblclick", function(e) {
+    crearMarcador(e.latlng);
+  });
+
+  // 📱 Para móvil (doble toque manual mejorado)
+  let ultimoToque = 0;
+
+  map.on("click", function(e) {
+    const tiempoActual = new Date().getTime();
+    const diferencia = tiempoActual - ultimoToque;
+
+    if (diferencia < 300) {
+      // doble toque detectado
+      crearMarcador(e.latlng);
+    }
+    ultimoToque = tiempoActual;
+  });
+
+  function crearMarcador(latlng) {
+    const descripcion = prompt(
+      "Descripción de la gotera:",
+      "Gotera " + contador
+    );
+
+    if (!descripcion) return;
+
+    // marcador arrastrable
+    const marker = L.marker(latlng, {
+      draggable: true
+    }).addTo(map);
+
+    marker.bindPopup(crearPopup(descripcion, latlng)).openPopup();
+
+    // actualizar coordenadas al mover
+    marker.on("dragend", () => {
+      const p = marker.getLatLng();
+      marker.setPopupContent(crearPopup(descripcion, p)).openPopup();
+    });
+
+    contador++;
+  }
+
+  function crearPopup(desc, coords) {
+    return `
+      <b>${desc}</b><br>
+      Lat: ${coords.lat.toFixed(6)}<br>
+      Lon: ${coords.lng.toFixed(6)}<br>
+      <small>🖐 Arrastrable</small><br>
+      <small>📍 Doble toque para agregar más</small>
+    `;
+  }
+</script>
+
+</body>
+</html>
